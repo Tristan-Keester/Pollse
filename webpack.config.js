@@ -2,39 +2,18 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
 
 module.exports = {
-  entry: './client/index.js',
+  mode: 'development',
+  entry: './client/index.tsx',
   output: {
     path: path.join(__dirname, "/dist"), // the bundle output path
     filename: "bundle.js", // the name of the bundle
   },
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: "client/index.html", // to import index.html file inside index.js
-    }),
-  ],
-  devServer: {
-    static: {
-      directory: path.join(__dirname, 'build'),
-    },
-    proxy: {
-      '/': 'http://localhost:3000',
-    },
-    port: 8080, // you can change the port
-  },
   module: {
     rules: [
       {
-        test: /\.(js|jsx)$/, // .js and .jsx files
+        test: /\.(ts|tsx)$/, // .js and .jsx files
         exclude: /node_modules/, // excluding the node_modules folder
-        use: {
-          loader: "babel-loader",
-          options: {
-            presets: [
-              ['@babel/preset-env', {targets: "defaults"}],
-              ['@babel/preset-react', {targets: "defaults"}],
-            ]
-          }
-        },
+        use: ['ts-loader'],
       },
       {
         test: /\.(sa|sc|c)ss$/, // styles files
@@ -46,5 +25,23 @@ module.exports = {
         options: { limit: false },
       },
     ],
+  },
+  resolve: {
+    extensions: ['.tsx', '.ts', '.js'],
+  },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: "client/index.html", // to import index.html file inside index.ts
+    }),
+  ],
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'build'),
+    },
+    proxy: {
+      '/': 'http://localhost:3000',
+    },
+    port: 8080, // you can change the port
+    hot: true,
   },
 };
