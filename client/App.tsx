@@ -6,10 +6,10 @@ const App = () => {
   const [world, setWorld] = useState("Hello world");
 
   function testFetch() {
-    fetch('/test')
-    .then(response => response.json())
-    .then(data => setWorld(data))
-    .catch(err => console.log('error: ' + err))
+    fetch('/api/test')
+        .then(response => response.json())
+        .then(data => setWorld(data))
+        .catch(err => console.log('error: ' + err))
   }
 
   return(

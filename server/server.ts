@@ -8,7 +8,7 @@ app.use(express.json());
 app.use(express.urlencoded())
 
 
-app.get('/test', (_req: Request, res: Response) => {
+app.get('/api/test', (_req: Request, res: Response) => {
   res.status(200).json('World changed');
 })
 
