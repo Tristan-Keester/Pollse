@@ -1,31 +1,32 @@
 import express, { Request, Response, NextFunction } from 'express';
 import  path from 'path';
 
+import { ServerError } from './types';
+
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-app.use(express.urlencoded())
 
-
-app.get('/api/test', (_req: Request, res: Response) => {
+app.get('/api/test', (_req, res) => {
   res.status(200).json('World changed');
-})
-
-app.get('/', (_req: Request, res: Response) => {
-  res.status(200).sendFile(path.resolve(__dirname, './client/index.html'));
 });
 
-app.use('*', (_req: Request, res: Response) => {
+app.get('/*', (_req, res) => {
+   res.status(200).sendFile(path.join(__dirname, '../client/index.html'));
+//  res.status(200).sendFile(path.join(__dirname, '../client/index.html'), (err) => {
+//    if (err) {
+//      res.status(500).send(err);
+//    }
+//  });
+});
+
+app.use('*', (_req, res) => {
   res.status(404).send('Nothings exists here :O')
 });
 
 
-type ServerError = {
-  log: string,
-  status: number,
-  message: { err: string }
-}
+
 // Error handler
 app.use((err: ServerError, _req: Request, res: Response, _next: NextFunction) => {
   const defaultErr = {
@@ -42,5 +43,3 @@ app.use((err: ServerError, _req: Request, res: Response, _next: NextFunction) =>
 app.listen(PORT, () => {
   console.log(`Server listening on port: ${PORT}...`);
 });
-
-module.exports = app;
