@@ -12,8 +12,8 @@ const App = () => {
     <BrowserRouter>
       <Routes>
         <Route path='/makepoll' element={<MakePoll />} />
-        <Route path='/vote/:pollID' element={<Vote />} />
-        <Route path='/results/:pollID' element={<Results />} />
+        <Route path='/vote/*' element={<Vote />} />
+        <Route path='/results/*' element={<Results />} />
         <Route path='/' element={<Home />} />
       </Routes>
     </BrowserRouter>

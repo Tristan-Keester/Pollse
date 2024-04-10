@@ -8,17 +8,16 @@ const PORT = 3000;
 
 app.use(express.json());
 
+import pollRouter from './Routes/pollRouter';
+
+app.use('/api/poll', pollRouter);
+
 app.get('/api/test', (_req, res) => {
   res.status(200).json('World changed');
 });
 
 app.get('/*', (_req, res) => {
-   res.status(200).sendFile(path.join(__dirname, '../client/index.html'));
-//  res.status(200).sendFile(path.join(__dirname, '../client/index.html'), (err) => {
-//    if (err) {
-//      res.status(500).send(err);
-//    }
-//  });
+  res.status(200).sendFile(path.join(__dirname, '../client/index.html'));
 });
 
 app.use('*', (_req, res) => {
