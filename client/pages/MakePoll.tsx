@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import '../stylesheets/app.scss';
+import React, { useState } from "react";
 
-import Header from '../components/header';
-import { PollCreateData } from '../types';
+import Header from "../components/header";
+import { PollCreateData } from "../types";
 
 const MakePoll = () => {
   const [answers, setAnswers] = useState<String[]>([]);
@@ -12,7 +11,7 @@ const MakePoll = () => {
     const ans = document.getElementById("answer-input-field") as HTMLInputElement;
     
     // !!! Tell user to put something in field
-    if (ans.value === '') return; 
+    if (ans.value === "") return; 
     // !!! Tell user they created duplicate
     if (answers.includes(ans.value)) return;
 
@@ -21,14 +20,14 @@ const MakePoll = () => {
     setAnswers([...answers, ans.value]);
     setHtmlAnswers([...htmlAnswers, htmlAns]);
 
-    ans.value = '';
+    ans.value = "";
   } 
 
   async function startPoll() {
     const question = document.getElementById("question-input-field") as HTMLInputElement;
 
     // !!! Tell user to input a question
-    if (question.value === '') return;
+    if (question.value === "") return;
 
     const pollCreateData: PollCreateData = { question: question.value, answers };
     
@@ -60,7 +59,7 @@ const MakePoll = () => {
         <input type="text" id="question-input-field"/><br/>
       </form>
       <label>Create Answer: </label>
-      <input type="text" id="answer-input-field" onKeyDown={(event) => event.key === 'Enter' ? addAnswer() : false}/>
+      <input type="text" id="answer-input-field" onKeyDown={(event) => event.key === "Enter" ? addAnswer() : false}/>
       <button type="button" id="add-answer-button" onClick={addAnswer}>Add answer</button>
       {htmlAnswers}
       <br/>
