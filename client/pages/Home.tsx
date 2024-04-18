@@ -13,11 +13,10 @@ const Home = () => {
   }
 
   return(
-    <div>
+    <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
-      <h2>Home</h2>
-      <button onClick={() => navigate("/makepoll")} className="font-bold border-black border-solid border-2 rounded m-2 p-1">Make Poll</button>
-      <button onClick={goToPoll} className="font-bold border-black border-solid border-2 rounded m-2 p-1">Go to Poll</button>
+      <button onClick={() => navigate("/makepoll")} className="bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Make Poll</button>
+      <button onClick={goToPoll} className="bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Go to Poll</button>
       <input type="text" id="go-to-poll-input" placeholder="Poll ID" className="border-black border-solid border-2 rounded"/>
     </div>
   );

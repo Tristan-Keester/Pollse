@@ -8,7 +8,7 @@ const Vote = () => {
   const pollID = location.pathname.split("/")[2];
 
   return(
-    <div>
+    <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
       <p>Vote</p>
       <p>{pollID}</p>
