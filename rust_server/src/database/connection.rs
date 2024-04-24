@@ -7,13 +7,24 @@ pub fn connect() -> Result<Connection, rusqlite::Error> {
 
     println!("Connected to database");
 
-    conn.execute(
+    let table_creation = [
         "CREATE TABLE polls (
-            id         INTEGER PRIMARY KEY,
-            question   TEXT NOT NULL
+            id       INTEGER PRIMARY KEY,
+            question TEXT NOT NULL
         )",
-        (), // empty list of parameters.
-    ).expect("Should connect");
+        "CREATE TABLE answers (
+            id      INTEGER PRIMARY KEY,
+            answer  TEXT NOT NULL,
+            poll_id INTEGER,
+            CONSTRAINT fk_polls
+                FOREIGN KEY (poll_id)
+                REFERENCES  polls(id)
+        )",
+    ];
+
+    for query in table_creation {
+        conn.execute(query, ()).expect(format!("Should create table: {}", query).as_str());
+    }
 
     Ok(conn)
 }

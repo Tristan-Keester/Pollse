@@ -1,4 +1,5 @@
 use rusqlite::Connection;
+use serde::{Serialize, Deserialize};
 
 use crate::error_handler;
 
@@ -31,12 +32,17 @@ pub fn route(req: Vec<&str>, conn: &Connection) -> String {
     format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}")
 }
 
-use serde::{Serialize, Deserialize};
+#[derive(Serialize, Deserialize, Debug)]
+struct Answer {
+    id: i64,
+    answer: String,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Poll {
-    id: i32,
+    id: i64,
     question: String,
+    answers: Vec<Answer>,
 }
 
 fn create_poll<'a>(conn: &Connection, poll_body: PollBody) -> (&'a str, String) {
@@ -45,19 +51,31 @@ fn create_poll<'a>(conn: &Connection, poll_body: PollBody) -> (&'a str, String) 
         [&poll_body.question],
     ).expect("Should insert into database");
 
-    let mut stmt = conn.prepare("SELECT id, question FROM polls").expect("Should prepare query");
-    let question_iter = stmt.query_map([], |row| {
-        Ok(Poll {
-            id: row.get(0)?,
-            question: row.get(1)?,
-        })
-    }).expect("Should do question iter");
+    let poll_id = conn.last_insert_rowid();
 
-    let polls: Vec<Poll> = question_iter
-        .map(|poll| poll.unwrap())
-        .collect();
+    for answer in poll_body.answers {
+        conn.execute(
+            "INSERT INTO answers (answer, poll_id) VALUES (?1, ?2)",
+            (&answer, &poll_id)
+        ).expect("Should be able to insert row into answers");
+    }
 
-    let body = serde_json::to_string(&polls).unwrap();
+    let body = serde_json::to_string(&poll_id).unwrap();
 
     ("HTTP/1.1 200 OK", body)
+}
+
+fn get_answers(conn: &Connection, poll_id: i64) -> Vec<Answer> {
+    // !!! Figure out how to properly sanitize input
+    let mut stmt = conn.prepare(format!("SELECT id, answer FROM answers WHERE poll_id = {}", &poll_id).as_str()).expect("Should find answers");
+    let answer_iter = stmt.query_map([], |row| {
+        Ok(Answer {
+            id: row.get(0)?,
+            answer: row.get(1)?
+        })
+    }).expect("Should be able to unwrap answer_iter");
+
+    answer_iter
+        .map(|answer| answer.unwrap())
+        .collect()
 }
