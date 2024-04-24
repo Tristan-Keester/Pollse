@@ -1,9 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 
 import Header from "../components/header";
 import { PollCreateData } from "../types";
 
 const MakePoll = () => {
+  const navigate = useNavigate();
+
   const [answers, setAnswers] = useState<String[]>([]);
   const [htmlAnswers, setHtmlAnswers] = useState<React.JSX.Element[]>([]);
 
@@ -33,6 +36,7 @@ const MakePoll = () => {
 
     // !!! Tell user to input a question
     if (question.value === "") return;
+    if (answers.length <= 1) return;
 
     const pollCreateData: PollCreateData = { question: question.value, answers };
     
@@ -45,10 +49,9 @@ const MakePoll = () => {
         body: JSON.stringify(pollCreateData),
       });
 
-      // !!! Handle data for redir?
       const data = await response.json();
-
-      console.log(data);
+      
+      navigate(`/results/${data}`);
     }
     catch (error) {
       console.error("Error occured when attempting to create a new poll:\n\t", error);

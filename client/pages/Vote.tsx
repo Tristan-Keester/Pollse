@@ -10,8 +10,8 @@ const Vote = () => {
   return(
     <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
-      <p>Vote</p>
-      <p>{pollID}</p>
+      <p className="text-2xl font-bold">Vote</p>
+      <p className="text-2xl font-bold">{pollID}</p>
     </div>
   );
 };

@@ -8,10 +8,10 @@ const Results = () => {
   const pollID = location.pathname.split("/")[2];
 
   return(
-    <div>
+    <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
-      <p>Results</p>
-      <p>{pollID}</p>
+      <p className="text-2xl font-bold">Results</p>
+      <p className="text-2xl font-bold">{pollID}</p>
     </div>
   );
 };
