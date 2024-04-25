@@ -1,6 +1,6 @@
 import React from 'react';
 
-type ShowVote = () => void | null;
+type ShowVote = (e: React.SyntheticEvent) => void | null;
 
 const Answer = ({ num, value, showVote }: { num: number, value: string, showVote: ShowVote }) => {
   if (showVote) {

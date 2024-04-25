@@ -15,6 +15,7 @@ pub fn connect() -> Result<Connection, rusqlite::Error> {
         "CREATE TABLE answers (
             id      INTEGER PRIMARY KEY,
             answer  TEXT NOT NULL,
+            votes   INTEGER DEFAULT 0 NOT NULL,
             poll_id INTEGER,
             CONSTRAINT fk_polls
                 FOREIGN KEY (poll_id)

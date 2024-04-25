@@ -3,10 +3,10 @@ use serde::{Serialize, Deserialize};
 
 use crate::error_handler;
 
-#[derive(Debug)]
-struct PollBody<'a, 'b> {
-    question: &'a str,
-    answers: Vec<&'b str>,
+#[derive(Serialize, Deserialize, Debug)]
+struct PollBody {
+    question: String,
+    answers: Vec<String>,
 }
 
 pub fn route(req: Vec<&str>, conn: &Connection) -> String {
@@ -21,6 +21,7 @@ pub fn route(req: Vec<&str>, conn: &Connection) -> String {
         },
         "POST" => match request_line[1] {
             "/api/poll/create" => create_poll(conn, req),
+            "/api/poll/vote" => vote_poll(conn, req),
             _ => error_handler::context(),
         },
         _ => error_handler::context(),
@@ -39,15 +40,10 @@ struct Answer {
 }
 
 fn create_poll<'a>(conn: &Connection, req: Vec<&str>) -> (&'a str, String) {
-    let body: serde_json::Value = serde_json::from_str(req[req.len() -1]).unwrap();
 
-    let poll_body = PollBody {
-        question: body["question"].as_str().unwrap(),
-        answers: body["answers"].as_array().unwrap()
-            .iter()
-            .map(|el| el.as_str().unwrap())
-            .collect(),
-    };
+    let body: PollBody = serde_json::from_str(req[req.len() -1]).unwrap();
+
+    let poll_body = body; 
     
     conn.execute(
         "INSERT INTO polls (question) VALUES (?)", 
@@ -94,6 +90,7 @@ fn get_poll_data<'a>(conn: &Connection, req_url: &str) -> (&'a str, String) {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 struct Question {
     quest: String,
 }
@@ -129,4 +126,20 @@ fn get_answers(conn: &Connection, poll_id: i64) -> Vec<Answer> {
     answer_iter
         .map(|answer| answer.unwrap())
         .collect()
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AnswerId {
+    id: i64,
+}
+
+fn vote_poll<'a>(conn: &Connection, req: Vec<&str>) -> (&'a str, String) {
+    let body: AnswerId = serde_json::from_str(req[req.len() -1]).unwrap();
+ 
+    conn.execute(
+        "UPDATE answers SET votes = votes + 1 WHERE id = ?", 
+        [&body.id],
+    ).expect("Should update answer in database");
+
+    ("HTTP/1.1 200 OK", String::from("true"))
 }

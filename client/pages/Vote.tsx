@@ -17,8 +17,32 @@ const Vote = () => {
     getPoll();
   }, []);
 
-  async function vote() {
-    console.log("Hi I voted :)");
+  async function vote(id: number) {
+    try {
+      const voteData = {
+        id,
+      }
+
+      const response = await fetch("/api/poll/vote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(voteData),
+      });
+      const data = await response.json();
+
+      if (data === true) {
+        navigate(`/results/${pollID}`);
+      }
+      else {
+        // !!! Inform user of voting issue
+        console.error("Couldn't vote");
+      }
+    }
+    catch (error) {
+      console.error("Error when trying to vote: ", error);
+    }
   }
 
   async function getPoll() {
@@ -44,7 +68,7 @@ const Vote = () => {
           key={`${i}${data.answers[i].id}`} 
           num={i + 1} 
           value={data.answers[i].answer}
-          showVote={vote}
+          showVote={() => vote(data.answers[i].id)}
         />);
       }
 
@@ -53,6 +77,10 @@ const Vote = () => {
     catch (error) {
       console.error("Error occured when fetching question and answer data: ", error);
     }
+  }
+
+  function goToResults() {
+    navigate(`/results/${pollID}`);
   }
 
   return(
@@ -68,6 +96,7 @@ const Vote = () => {
           {answers}
         </div>
         <div className="col-span-6 h-1 w-full bg-orange-300"></div>
+        <button type="button" onClick={goToResults} className="col-span-6 w-32 h-12 bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Go To Results</button>
       </div>
     </div>
   );
