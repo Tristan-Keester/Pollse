@@ -33,12 +33,6 @@ pub fn route(req: Vec<&str>, conn: &Connection) -> String {
 
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Answer {
-    id: i64,
-    answer: String,
-}
-
 fn create_poll<'a>(conn: &Connection, req: Vec<&str>) -> (&'a str, String) {
 
     let body: PollBody = serde_json::from_str(req[req.len() -1]).unwrap();
@@ -113,13 +107,21 @@ fn get_question(conn: &Connection, poll_id: i64) -> String {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct Answer {
+    id: i64,
+    answer: String,
+    votes: i64,
+}
+
 fn get_answers(conn: &Connection, poll_id: i64) -> Vec<Answer> {
     // !!! Figure out how to properly sanitize input
-    let mut stmt = conn.prepare(format!("SELECT id, answer FROM answers WHERE poll_id = {}", &poll_id).as_str()).expect("Should find answers");
+    let mut stmt = conn.prepare(format!("SELECT id, answer, votes FROM answers WHERE poll_id = {}", &poll_id).as_str()).expect("Should find answers");
     let answer_iter = stmt.query_map([], |row| {
         Ok(Answer {
             id: row.get(0)?,
-            answer: row.get(1)?
+            answer: row.get(1)?,
+            votes: row.get(2)?
         })
     }).expect("Should be able to unwrap answer_iter");
 

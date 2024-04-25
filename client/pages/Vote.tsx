@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import Header from "../components/header";
-import Answer from "../components/answer";
+import Answer, { AnswerOptions } from "../components/answer";
 
 const Vote = () => {
   const location = useLocation();
@@ -68,7 +68,8 @@ const Vote = () => {
           key={`${i}${data.answers[i].id}`} 
           num={i + 1} 
           value={data.answers[i].answer}
-          showVote={() => vote(data.answers[i].id)}
+          answerOption={AnswerOptions.Vote}
+          voteFn={() => vote(data.answers[i].id)}
         />);
       }
 
@@ -87,8 +88,8 @@ const Vote = () => {
     <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
       <p className="text-2xl font-bold">Vote</p>
-      <p className="text-2xl font-bold">{pollID}</p>
       <div className="grid grid-cols-6 gap-3 place-items-center">
+        <div className="col-span-6 h-1 w-full bg-orange-300"></div>
         <label className="text-2xl font-bold">Question: </label>
         <p id="question-text" className="col-span-5 h-10 w-full text-xl font-semibold content-center">{question}</p>
         <div className="col-span-6 h-1 w-full bg-orange-300"></div>

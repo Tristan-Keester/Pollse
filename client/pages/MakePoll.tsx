@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 
 import Header from "../components/header";
-import Answer from "../components/answer";
+import Answer, { AnswerOptions } from "../components/answer";
 import { PollCreateData } from "../types";
 
 const MakePoll = () => {
@@ -23,7 +23,7 @@ const MakePoll = () => {
       key={`${ans.value}${answers.length + 1}${Date.now()}`} 
       num={answers.length + 1} 
       value={ans.value}
-      showVote={null}
+      answerOption={AnswerOptions.MakePoll}
     />
 
     setAnswers([...answers, ans.value]);
@@ -63,6 +63,7 @@ const MakePoll = () => {
     <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
       <div className="grid grid-cols-6 gap-3 place-items-center">
+        <div className="col-span-6 h-1 w-full bg-orange-300"></div>
         <label className="text-2xl font-bold">Question: </label>
         <input type="text" id="question-input-field" className="col-span-5 h-10 w-full border-black border-solid border-2 rounded"/>
         <label className="text-2xl font-bold">Answers: </label>
