@@ -9,6 +9,8 @@ const Home = () => {
   function goToPoll() {
     const pollID = document.getElementById("go-to-poll-input") as HTMLInputElement;
 
+    if (pollID.value === "") return;
+
     navigate(`/vote/${pollID.value}`);
   }
 

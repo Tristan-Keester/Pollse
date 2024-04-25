@@ -10,8 +10,35 @@ struct PollBody<'a, 'b> {
 }
 
 pub fn route(req: Vec<&str>, conn: &Connection) -> String {
-    let request_line = req[0];
+    let request_line: Vec<&str> = req[0].split(" ").collect();
 
+    println!("{:?}", request_line);
+    
+    let (status_line, contents) = match request_line[0] {
+        "GET" => match request_line[1] {
+            rl if rl.contains("/api/poll/data") => get_poll_data(conn, request_line[1]),
+            _ => error_handler::context(),
+        },
+        "POST" => match request_line[1] {
+            "/api/poll/create" => create_poll(conn, req),
+            _ => error_handler::context(),
+        },
+        _ => error_handler::context(),
+    };
+
+    let length = contents.len();
+
+    format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}")
+
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Answer {
+    id: i64,
+    answer: String,
+}
+
+fn create_poll<'a>(conn: &Connection, req: Vec<&str>) -> (&'a str, String) {
     let body: serde_json::Value = serde_json::from_str(req[req.len() -1]).unwrap();
 
     let poll_body = PollBody {
@@ -21,31 +48,7 @@ pub fn route(req: Vec<&str>, conn: &Connection) -> String {
             .map(|el| el.as_str().unwrap())
             .collect(),
     };
-
-    let (status_line, contents) = match request_line {
-        "POST /api/poll/create HTTP/1.1" => create_poll(conn, poll_body),
-        _ => error_handler::context(),
-    };
-
-    let length = contents.len();
-
-    format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}")
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Answer {
-    id: i64,
-    answer: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Poll {
-    id: i64,
-    question: String,
-    answers: Vec<Answer>,
-}
-
-fn create_poll<'a>(conn: &Connection, poll_body: PollBody) -> (&'a str, String) {
+    
     conn.execute(
         "INSERT INTO polls (question) VALUES (?)", 
         [&poll_body.question],
@@ -63,6 +66,54 @@ fn create_poll<'a>(conn: &Connection, poll_body: PollBody) -> (&'a str, String) 
     let body = serde_json::to_string(&poll_id).unwrap();
 
     ("HTTP/1.1 200 OK", body)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Poll {
+    id: i64,
+    question: String,
+    answers: Vec<Answer>,
+}
+
+fn get_poll_data<'a>(conn: &Connection, req_url: &str) -> (&'a str, String) {
+    let poll_id = &req_url[(req_url.rfind('/').expect("Should find /") + 1)..req_url.len()].parse::<i64>().unwrap(); 
+
+    let poll = Poll {
+        id: *poll_id,
+        question: get_question(conn, *poll_id),
+        answers: get_answers(conn, *poll_id),
+    };
+
+    if poll.question == String::from("Could not find that poll") {
+        return ("HTTP/1.1 404 NOT FOUND", serde_json::to_string("No poll exists with that ID").unwrap());
+    }
+
+    let body = serde_json::to_string(&poll).unwrap();
+
+    ("HTTP/1.1 200 OK", body)
+}
+
+#[allow(dead_code)]
+struct Question {
+    quest: String,
+}
+
+fn get_question(conn: &Connection, poll_id: i64) -> String {
+    let mut stmt = conn.prepare(format!("SELECT question FROM polls WHERE id = {}", &poll_id).as_str()).expect("Should find answers");
+    let question = stmt.query_map([], |row| {
+        Ok(Question {
+            quest: row.get(0)?,
+        })
+    }).expect("Should be able to unwrap answer_iter");
+
+    let question_vec: Vec<Question> = question
+        .map(|q| q.unwrap())
+        .collect();
+
+    match question_vec.len() {
+        1 => question_vec[0].quest.clone(),
+        _ => String::from("Could not find that poll"),
+    }
 }
 
 fn get_answers(conn: &Connection, poll_id: i64) -> Vec<Answer> {
