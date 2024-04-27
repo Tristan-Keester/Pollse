@@ -17,6 +17,7 @@ pub fn route(req: Vec<&str>, conn: &Connection) -> String {
     let (status_line, contents) = match request_line[0] {
         "GET" => match request_line[1] {
             rl if rl.contains("/api/poll/data") => get_poll_data(conn, request_line[1]),
+            rl if rl.contains("/api/poll/answers") => get_poll_answers(conn, request_line[1]),
             _ => error_handler::context(),
         },
         "POST" => match request_line[1] {
@@ -79,6 +80,16 @@ fn get_poll_data<'a>(conn: &Connection, req_url: &str) -> (&'a str, String) {
     }
 
     let body = serde_json::to_string(&poll).unwrap();
+
+    ("HTTP/1.1 200 OK", body)
+}
+
+fn get_poll_answers<'a>(conn: &Connection, req_url: &str) -> (&'a str, String) {
+    let poll_id = &req_url[(req_url.rfind('/').expect("Should find /") + 1)..req_url.len()].parse::<i64>().unwrap(); 
+
+    let answers = get_answers(conn, *poll_id);
+
+    let body = serde_json::to_string(&answers).unwrap();
 
     ("HTTP/1.1 200 OK", body)
 }

@@ -21,6 +21,10 @@ pub fn connect() -> Result<Connection, rusqlite::Error> {
                 FOREIGN KEY (poll_id)
                 REFERENCES  polls(id)
         )",
+        "CREATE TABLE connections (
+            id INTEGER PRIMARY KEY,
+            origin TEXT NOT NULL
+        )"
     ];
 
     for query in table_creation {

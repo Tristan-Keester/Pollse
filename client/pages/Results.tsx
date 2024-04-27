@@ -15,6 +15,7 @@ const Results = () => {
   
   useEffect(() => {
     getPoll();
+    setInterval(getAnswers, 1000);
   }, []);
 
   async function getPoll() {
@@ -50,11 +51,38 @@ const Results = () => {
     }
   }
 
+  async function getAnswers() {
+    try {
+      const response = await fetch(`/api/poll/answers/${pollID}`);
+      const data = await response.json();
+
+      console.log(data);
+
+      const answerArray: React.ReactElement[] = [];
+
+      for (let i = 0; i < data.answers.length; i++) {
+        answerArray.push(<Answer 
+          key={`${i}${data[i].id}`} 
+          num={i + 1} 
+          value={data[i].answer}
+          answerOption={AnswerOptions.Results}
+          votes={data[i].votes}
+        />);
+      }
+
+      setAnswers(answerArray);
+    }
+    catch (error) {
+      console.error("Error getting updated answers: ", error);
+    }
+  }
+
 
   return(
     <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
       <p className="text-2xl font-bold">Results</p>
+      <p className="text-2xl font-bold">Poll ID is: {pollID}</p>
       <div className="grid grid-cols-6 gap-3 place-items-center">
         <div className="col-span-6 h-1 w-full bg-orange-300"></div>
         <label className="text-2xl font-bold">Question: </label>
