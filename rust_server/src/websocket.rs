@@ -34,6 +34,7 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
                 },
             };
 
+            println!("{:#?}", initial_size_buf[0]);
             let (length, mask) = match initial_size_buf[1] - 128 {
                 len if len <= 125 => (
                     (initial_size_buf[1] - 128 + 6) as usize,
@@ -64,6 +65,7 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
                 encoded.push(buffer[i]);
             }
 
+            println!("len: {:?}\nmask: {:#?}\nencoded: {:#?}", initial_size_buf[1], mask, encoded);
             let mut decoded = Vec::new();
             for i in 0..encoded.len() {
                 decoded.push((encoded[i] ^ mask[i % 4]) as char);
@@ -72,9 +74,28 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
             let string: String = decoded.iter().collect();
 
             println!("{}", string);
+
+            let reply = format_reply("does this work");
+            // let r_mask = [131, 106, 20, 80];
+            // let reply: Vec<u8> = Vec::from([129, 128 + 4, 131, 106, 20, 80, 'h' as u8 ^ r_mask[0], 'e' as u8 ^ r_mask[1], 'h' as u8 ^ r_mask[2], 'e' as u8 ^ r_mask[3]]);
+            println!("reply: {:#?}", reply);
+            stream.write_all(&reply).unwrap();
+            println!("end of loop");
         }
     });
 }
+
+fn format_reply(str: &str) -> Vec<u8> {
+    let reply_mask = [rand::random::<u8>(), rand::random::<u8>(), rand::random::<u8>(), rand::random::<u8>()];
+    let mut reply: Vec<u8> = Vec::from([129, str.len() as u8 + 128, reply_mask[0], reply_mask[1], reply_mask[2], reply_mask[3]]);
+
+    for (i, c) in str.chars().enumerate() {
+        reply.push(c as u8 ^ reply_mask[i % 4]);
+    }
+
+    reply
+}
+
 
 fn create_ws_hash(key: &str) -> String {
     let to_hash = key[(key.find(':').unwrap() + 2)..key.len()].to_string() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
