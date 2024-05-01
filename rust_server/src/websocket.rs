@@ -26,45 +26,45 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
         stream.set_read_timeout(Some(Duration::new(60, 0))).expect("Should be able to set read timeout");
 
         loop {
-            let mut buffy = [0; 128];
-            match stream.read(&mut buffy) {
+            let mut initial_size_buf = [0; 14];
+            match stream.peek(&mut initial_size_buf) {
                 Ok(_) => (),
                 _ => {
                     break;
                 },
             };
 
-            let (length, mask) = match buffy[1] - 128 {
+            let (length, mask) = match initial_size_buf[1] - 128 {
                 len if len <= 125 => (
-                    (buffy[1] - 128 + 6) as usize,
-                    [buffy[2], buffy[3], buffy[4], buffy[5]]
+                    (initial_size_buf[1] - 128 + 6) as usize,
+                    [initial_size_buf[2], initial_size_buf[3], initial_size_buf[4], initial_size_buf[5]]
                 ),
                 len if len == 126 => (
-                    u16::from_be_bytes([buffy[2], buffy[3]]) as usize,
-                    [buffy[4], buffy[5], buffy[6], buffy[7]]
+                    u16::from_be_bytes([initial_size_buf[2], initial_size_buf[3]]) as usize,
+                    [initial_size_buf[4], initial_size_buf[5], initial_size_buf[6], initial_size_buf[7]]
                 ),
                 len if len == 127 => {
                     let mut bytes: [u8; 8] = [0; 8];
                     for i in 2..=9 {
-                        bytes[i - 2] = buffy[i];
+                        bytes[i - 2] = initial_size_buf[i];
                     }
 
-                    (u64::from_be_bytes(bytes) as usize, [buffy[10], buffy[11], buffy[12], buffy[13]])
+                    (u64::from_be_bytes(bytes) as usize, [initial_size_buf[10], initial_size_buf[11], initial_size_buf[12], initial_size_buf[13]])
                 },
                 len => {
                     panic!("Couldn't match websocket length! len was {:?}", len);
                 }
             };
 
-            let mut encoded: Vec<u8> = Vec::new();
+            let mut buffer = vec![0; length];
+            stream.read_exact(&mut buffer).unwrap();
 
-            println!("{:?}\n{:#?}", length - 6, mask);
-            for i in 6..length as usize {
-                encoded.push(buffy[i]);
+            let mut encoded: Vec<u8> = Vec::new();
+            for i in 6..length {
+                encoded.push(buffer[i]);
             }
 
             let mut decoded = Vec::new();
-
             for i in 0..encoded.len() {
                 decoded.push((encoded[i] ^ mask[i % 4]) as char);
             }
