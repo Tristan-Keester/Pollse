@@ -23,15 +23,15 @@ const Home = () => {
       "protocolOne",
     );
 
-    exampleSocket.onopen = (event) => {
+    exampleSocket.onopen = () => {
       setSocket(exampleSocket);
     }
   }
 
   async function sendOverSocket() {
-    console.log(socket);
-    socket.send("Hello world");
-    console.log("sent socket message");
+    let message = document.getElementById("ws-input") as HTMLInputElement;
+
+    socket.send(message.value);
   }
 
   return(
@@ -42,6 +42,7 @@ const Home = () => {
       <input type="text" id="go-to-poll-input" placeholder="Poll ID" className="border-black border-solid border-2 rounded"/>
       <button onClick={openWebsocket} className="bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">WebSocket</button>
       <button onClick={sendOverSocket} className="bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Send on Socket</button>
+      <input type="text" id="ws-input" placeholder="message" className="border-black border-solid border-2 rounded"/>
     </div>
   );
 };

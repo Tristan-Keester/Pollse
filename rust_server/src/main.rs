@@ -1,6 +1,4 @@
 use rusqlite::Connection;
-use sha1::{Sha1, Digest};
-use base64::{engine::general_purpose, Engine as _};
 
 use rust_server::{
     error_handler, 
@@ -8,12 +6,13 @@ use rust_server::{
         general_router,
         poll_router
     },
-    database::connection
+    database::connection,
+    websocket
 };
 
 use std::{
     io::prelude::*, 
-    net::{TcpListener, TcpStream}
+    net::{TcpListener, TcpStream},
 };
 
 fn main() {
@@ -37,43 +36,8 @@ fn handle_connection(mut stream: TcpStream, conn: &Connection) {
 
     // WS
     if req[0].to_string().contains("/api/socketserver") {
-
-        let ws_hash = create_ws_hash(req[10]);
-
-        let (status_line, upgrade, connection, sec_websocket_accept) = (
-            "HTTP/1.1 101 Switching Protocols",
-            "Upgrade: websocket",
-            "Connection: Upgrade",
-            format!("Sec-WebSocket-Accept: {ws_hash}"), 
-        );
-        let response = format!("{status_line}\r\n{upgrade}\r\n{connection}\r\n{sec_websocket_accept}\r\n\r\n");
-
-        println!("{}", response);
-        stream.write_all(response.as_bytes()).unwrap();
-
-        loop {
-            let mut buffy = [0; 128];
-            stream.read(&mut buffy).unwrap();
-
-            let length = buffy[1] - 128 + 6;
-            let mask = [buffy[2], buffy[3], buffy[4], buffy[5]];
-            let mut encoded: Vec<u8> = Vec::new();
-
-            for i in 6..17 {
-                encoded.push(buffy[i]);
-            }
-
-            let mut decoded = Vec::new();
-
-            for i in 0..encoded.len() {
-                decoded.push((encoded[i] ^ mask[i % 4]) as char);
-            }
-
-            let string: String = decoded.iter().collect();
-
-            println!("{}", string);
-
-        }
+        websocket::continue_connection(stream, req);
+        return;
     }
 
     // Normal HTTP stuff
@@ -86,13 +50,3 @@ fn handle_connection(mut stream: TcpStream, conn: &Connection) {
     stream.write_all(response.as_bytes()).unwrap();
 }
 
-fn create_ws_hash(key: &str) -> String {
-    let to_hash = key[(key.find(':').unwrap() + 2)..key.len()].to_string() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-    let mut hasher = Sha1::new();
-    hasher.update(to_hash);
-    let result = hasher.finalize();
-
-
-    general_purpose::STANDARD.encode(&result)
-}

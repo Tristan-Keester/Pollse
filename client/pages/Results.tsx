@@ -15,7 +15,6 @@ const Results = () => {
   
   useEffect(() => {
     getPoll();
-    setInterval(getAnswers, 1000);
   }, []);
 
   async function getPoll() {
