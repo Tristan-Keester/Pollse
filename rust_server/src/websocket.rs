@@ -23,79 +23,142 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
     stream.write_all(response.as_bytes()).unwrap();
 
     spawn (move || {
-        stream.set_read_timeout(Some(Duration::new(60, 0))).expect("Should be able to set read timeout");
+        stream.set_read_timeout(Some(Duration::new(3, 0))).expect("Should be able to set read timeout");
+        let mut has_pinged = false;
+        let mut initiated_close = false;
 
         loop {
             let mut initial_size_buf = [0; 14];
             match stream.peek(&mut initial_size_buf) {
                 Ok(_) => (),
                 _ => {
-                    break;
-                },
-            };
-
-            println!("{:#?}", initial_size_buf[0]);
-            let (length, mask) = match initial_size_buf[1] - 128 {
-                len if len <= 125 => (
-                    (initial_size_buf[1] - 128 + 6) as usize,
-                    [initial_size_buf[2], initial_size_buf[3], initial_size_buf[4], initial_size_buf[5]]
-                ),
-                len if len == 126 => (
-                    u16::from_be_bytes([initial_size_buf[2], initial_size_buf[3]]) as usize,
-                    [initial_size_buf[4], initial_size_buf[5], initial_size_buf[6], initial_size_buf[7]]
-                ),
-                len if len == 127 => {
-                    let mut bytes: [u8; 8] = [0; 8];
-                    for i in 2..=9 {
-                        bytes[i - 2] = initial_size_buf[i];
+                    if has_pinged {
+                        // !!! Gracefully end connection
+                        println!("Breaking out");
+                        break;
                     }
-
-                    (u64::from_be_bytes(bytes) as usize, [initial_size_buf[10], initial_size_buf[11], initial_size_buf[12], initial_size_buf[13]])
+                    else {
+                        println!("pinging");
+                        let ping = create_ping();
+                        stream.write_all(&ping).unwrap();
+                        has_pinged = true;
+                        continue;
+                    }
                 },
-                len => {
-                    panic!("Couldn't match websocket length! len was {:?}", len);
-                }
             };
 
-            let mut buffer = vec![0; length];
-            stream.read_exact(&mut buffer).unwrap();
+            match initial_size_buf[0] {
+                129 => {
+                    println!("int buf: {:#?}", initial_size_buf);
 
-            let mut encoded: Vec<u8> = Vec::new();
-            for i in 6..length {
-                encoded.push(buffer[i]);
+                    let decoded = decode_frame(&stream, initial_size_buf);
+                    println!("{:#?}", decoded);
+
+                    let reply = create_frame("does this work", 129);
+                    stream.write_all(&reply).unwrap();
+                },
+                136 => {
+                    println!("Received close frame");
+                    if !initiated_close {
+                        let reply = create_frame("", 136);
+                        stream.write_all(&reply).unwrap();
+                    }
+                    break;
+                }
+                137 => {
+                    println!("Received ping");
+                    let reply = return_ping(&stream, initial_size_buf);
+                    stream.write_all(&reply).unwrap();
+                }
+                138 => {
+                    println!("Received pong");
+                    has_pinged = false;
+                    decode_frame(&stream, initial_size_buf);
+                },
+                err => {
+                    println!("something unknown came through: {:#?}", err);
+                    initiated_close = true;
+                    let close = create_frame("", 136);
+                    stream.write_all(&close).unwrap();
+                }
             }
-
-            println!("len: {:?}\nmask: {:#?}\nencoded: {:#?}", initial_size_buf[1], mask, encoded);
-            let mut decoded = Vec::new();
-            for i in 0..encoded.len() {
-                decoded.push((encoded[i] ^ mask[i % 4]) as char);
-            }
-
-            let string: String = decoded.iter().collect();
-
-            println!("{}", string);
-
-            let reply = format_reply("does this work");
-            // let r_mask = [131, 106, 20, 80];
-            // let reply: Vec<u8> = Vec::from([129, 128 + 4, 131, 106, 20, 80, 'h' as u8 ^ r_mask[0], 'e' as u8 ^ r_mask[1], 'h' as u8 ^ r_mask[2], 'e' as u8 ^ r_mask[3]]);
-            println!("reply: {:#?}", reply);
-            stream.write_all(&reply).unwrap();
-            println!("end of loop");
         }
     });
 }
 
-fn format_reply(str: &str) -> Vec<u8> {
-    let reply_mask = [rand::random::<u8>(), rand::random::<u8>(), rand::random::<u8>(), rand::random::<u8>()];
-    let mut reply: Vec<u8> = Vec::from([129, str.len() as u8 + 128, reply_mask[0], reply_mask[1], reply_mask[2], reply_mask[3]]);
+fn decode_frame(mut stream: &TcpStream, initial_buf: [u8; 14]) -> String {
+    let (length, mask) = decode_payload_length(initial_buf);
 
-    for (i, c) in str.chars().enumerate() {
+    let mut content_buffer = vec![0; length];
+    stream.read_exact(&mut content_buffer).unwrap();
+
+    let mut encoded: Vec<u8> = Vec::new();
+    for i in 6..length {
+        encoded.push(content_buffer[i]);
+    }
+
+    let mut decoded = Vec::new();
+    for i in 0..encoded.len() {
+        decoded.push((encoded[i] ^ mask[i % 4]) as char);
+    }
+
+    decoded.iter().collect()
+}
+
+fn decode_payload_length(buf: [u8; 14]) -> (usize, [u8; 4]) {
+    match buf[1] - 128 {
+        len if len <= 125 => (
+            (buf[1] - 128 + 6) as usize,
+            [buf[2], buf[3], buf[4], buf[5]]
+        ),
+        len if len == 126 => (
+            u16::from_be_bytes([buf[2], buf[3]]) as usize,
+            [buf[4], buf[5], buf[6], buf[7]]
+        ),
+        len if len == 127 => {
+            let mut bytes: [u8; 8] = [0; 8];
+            for i in 2..=9 {
+                bytes[i - 2] = buf[i];
+            }
+
+            (u64::from_be_bytes(bytes) as usize, [buf[10], buf[11], buf[12], buf[13]])
+        },
+        len => {
+            panic!("Couldn't match websocket length! len was {:?}", len);
+        }
+    }
+}
+
+fn create_frame(content: &str, first_byte: u8) -> Vec<u8> {
+    let reply_mask = [
+        rand::random::<u8>(),
+        rand::random::<u8>(),
+        rand::random::<u8>(),
+        rand::random::<u8>()
+    ];
+    let mut reply: Vec<u8> = Vec::from([
+        first_byte,
+        content.len() as u8 + 128,
+        reply_mask[0],
+        reply_mask[1],
+        reply_mask[2],
+        reply_mask[3]
+    ]);
+
+    for (i, c) in content.chars().enumerate() {
         reply.push(c as u8 ^ reply_mask[i % 4]);
     }
 
     reply
 }
 
+fn return_ping(stream: &TcpStream, buf: [u8; 14]) -> Vec<u8> {
+   create_frame(decode_frame(stream, buf).as_str(), 138) 
+}
+
+fn create_ping() -> Vec<u8> {
+    create_frame("ping", 137)
+}
 
 fn create_ws_hash(key: &str) -> String {
     let to_hash = key[(key.find(':').unwrap() + 2)..key.len()].to_string() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";

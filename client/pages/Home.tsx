@@ -34,6 +34,10 @@ const Home = () => {
     socket.send(message.value);
   }
 
+  async function closeSocket() {
+    socket.close();
+  }
+
   return(
     <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">
       <Header />
@@ -43,6 +47,7 @@ const Home = () => {
       <button onClick={openWebsocket} className="bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">WebSocket</button>
       <button onClick={sendOverSocket} className="bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Send on Socket</button>
       <input type="text" id="ws-input" placeholder="message" className="border-black border-solid border-2 rounded"/>
+      <button onClick={closeSocket} className="bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Close Socket</button>
     </div>
   );
 };
