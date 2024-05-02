@@ -4,11 +4,12 @@ use base64::{engine::general_purpose, Engine as _};
 use std::{
     io::prelude::*,
     net::TcpStream,
+    sync::mpsc::Receiver,
     thread::spawn,
     time::Duration
 };
 
-pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
+pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Receiver<String>) {
     let ws_hash = create_ws_hash(req[10]);
 
     let (status_line, upgrade, connection, sec_websocket_accept) = (
@@ -19,11 +20,11 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
     );
     let response = format!("{status_line}\r\n{upgrade}\r\n{connection}\r\n{sec_websocket_accept}\r\n\r\n");
 
-    println!("{}", response);
     stream.write_all(response.as_bytes()).unwrap();
 
     spawn (move || {
-        stream.set_read_timeout(Some(Duration::new(3, 0))).expect("Should be able to set read timeout");
+        stream.set_read_timeout(Some(Duration::new(60, 0))).expect("Should be able to set read timeout");
+
         let mut has_pinged = false;
         let mut initiated_close = false;
 
@@ -34,8 +35,15 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
                 _ => {
                     if has_pinged {
                         // !!! Gracefully end connection
-                        println!("Breaking out");
-                        break;
+                        if initiated_close {
+                            println!("Breaking out");
+                            break;
+                        }
+                        else {
+                            initiated_close = true;
+                            send_close_frame(&stream);
+                            continue;
+                        }
                     }
                     else {
                         println!("pinging");
@@ -49,8 +57,6 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
 
             match initial_size_buf[0] {
                 129 => {
-                    println!("int buf: {:#?}", initial_size_buf);
-
                     let decoded = decode_frame(&stream, initial_size_buf);
                     println!("{:#?}", decoded);
 
@@ -60,8 +66,7 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
                 136 => {
                     println!("Received close frame");
                     if !initiated_close {
-                        let reply = create_frame("", 136);
-                        stream.write_all(&reply).unwrap();
+                        send_close_frame(&stream);
                     }
                     break;
                 }
@@ -82,6 +87,14 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>) {
                     stream.write_all(&close).unwrap();
                 }
             }
+
+            println!("reached the receiver");
+            let result = receiver.try_recv();
+            match result {
+                Ok(val) => println!("ok!: {:#?}", val),
+                err => println!("Error!: {:#?}", err),
+            }
+            println!("got past recv");
         }
     });
 }
@@ -150,6 +163,11 @@ fn create_frame(content: &str, first_byte: u8) -> Vec<u8> {
     }
 
     reply
+}
+
+fn send_close_frame(mut stream: &TcpStream) {
+    let reply = create_frame("", 136);
+    stream.write_all(&reply).unwrap();
 }
 
 fn return_ping(stream: &TcpStream, buf: [u8; 14]) -> Vec<u8> {

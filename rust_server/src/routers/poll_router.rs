@@ -1,3 +1,5 @@
+use std::sync::mpsc::Sender;
+
 use rusqlite::Connection;
 use serde::{Serialize, Deserialize};
 
@@ -9,7 +11,7 @@ struct PollBody {
     answers: Vec<String>,
 }
 
-pub fn route(req: Vec<&str>, conn: &Connection) -> String {
+pub fn route(req: Vec<&str>, conn: &Connection, senders: &mut Vec<Sender<String>>) -> String {
     let request_line: Vec<&str> = req[0].split(" ").collect();
 
     println!("{:?}", request_line);
@@ -22,7 +24,7 @@ pub fn route(req: Vec<&str>, conn: &Connection) -> String {
         },
         "POST" => match request_line[1] {
             "/api/poll/create" => create_poll(conn, req),
-            "/api/poll/vote" => vote_poll(conn, req),
+            "/api/poll/vote" => vote_poll(conn, req, senders),
             _ => error_handler::context(),
         },
         _ => error_handler::context(),
@@ -146,13 +148,17 @@ struct AnswerId {
     id: i64,
 }
 
-fn vote_poll<'a>(conn: &Connection, req: Vec<&str>) -> (&'a str, String) {
+fn vote_poll<'a>(conn: &Connection, req: Vec<&str>, senders: &mut Vec<Sender<String>>) -> (&'a str, String) {
     let body: AnswerId = serde_json::from_str(req[req.len() -1]).unwrap();
  
     conn.execute(
         "UPDATE answers SET votes = votes + 1 WHERE id = ?", 
         [&body.id],
     ).expect("Should update answer in database");
+
+    for sender in senders.iter() {
+        sender.send("hoiya".to_string()).unwrap();
+    }
 
     ("HTTP/1.1 200 OK", String::from("true"))
 }
