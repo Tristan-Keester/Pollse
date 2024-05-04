@@ -21,6 +21,7 @@ const Vote = () => {
     try {
       const voteData = {
         id,
+        poll_id: Number(pollID),
       }
 
       const response = await fetch("/api/poll/vote", {

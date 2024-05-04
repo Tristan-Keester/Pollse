@@ -23,7 +23,7 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Rece
     stream.write_all(response.as_bytes()).unwrap();
 
     spawn (move || {
-        stream.set_read_timeout(Some(Duration::new(60, 0))).expect("Should be able to set read timeout");
+        stream.set_read_timeout(Some(Duration::new(1, 0))).expect("Should be able to set read timeout");
 
         let mut has_pinged = false;
         let mut initiated_close = false;
@@ -46,7 +46,6 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Rece
                         }
                     }
                     else {
-                        println!("pinging");
                         let ping = create_ping();
                         stream.write_all(&ping).unwrap();
                         has_pinged = true;
@@ -71,12 +70,10 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Rece
                     break;
                 }
                 137 => {
-                    println!("Received ping");
                     let reply = return_ping(&stream, initial_size_buf);
                     stream.write_all(&reply).unwrap();
                 }
                 138 => {
-                    println!("Received pong");
                     has_pinged = false;
                     decode_frame(&stream, initial_size_buf);
                 },
@@ -88,13 +85,14 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Rece
                 }
             }
 
-            println!("reached the receiver");
             let result = receiver.try_recv();
             match result {
-                Ok(val) => println!("ok!: {:#?}", val),
-                err => println!("Error!: {:#?}", err),
+                Ok(val) => {
+                    let reply = create_frame(val.as_str(), 129);
+                    stream.write_all(&reply).unwrap();
+                },
+                _ => (),
             }
-            println!("got past recv");
         }
     });
 }

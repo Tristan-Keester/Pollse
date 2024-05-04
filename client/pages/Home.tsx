@@ -19,7 +19,7 @@ const Home = () => {
   async function openWebsocket() {
     console.log("Button clicked");
     const exampleSocket = new WebSocket(
-      "ws://localhost:3000/api/socketserver",
+      "ws://localhost:3000/api/socketserver/1",
       "protocolOne",
     );
 

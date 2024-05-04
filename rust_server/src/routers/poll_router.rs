@@ -1,4 +1,7 @@
-use std::sync::mpsc::Sender;
+use std::{
+    collections::HashMap,
+    sync::mpsc::Sender,
+};
 
 use rusqlite::Connection;
 use serde::{Serialize, Deserialize};
@@ -11,7 +14,7 @@ struct PollBody {
     answers: Vec<String>,
 }
 
-pub fn route(req: Vec<&str>, conn: &Connection, senders: &mut Vec<Sender<String>>) -> String {
+pub fn route(req: Vec<&str>, conn: &Connection, senders:&mut HashMap<String, Vec<Sender<String>>>) -> String {
     let request_line: Vec<&str> = req[0].split(" ").collect();
 
     println!("{:?}", request_line);
@@ -146,9 +149,10 @@ fn get_answers(conn: &Connection, poll_id: i64) -> Vec<Answer> {
 #[derive(Serialize, Deserialize, Debug)]
 struct AnswerId {
     id: i64,
+    poll_id: i64,
 }
 
-fn vote_poll<'a>(conn: &Connection, req: Vec<&str>, senders: &mut Vec<Sender<String>>) -> (&'a str, String) {
+fn vote_poll<'a>(conn: &Connection, req: Vec<&str>, senders: &mut HashMap<String, Vec<Sender<String>>>) -> (&'a str, String) {
     let body: AnswerId = serde_json::from_str(req[req.len() -1]).unwrap();
  
     conn.execute(
@@ -156,9 +160,17 @@ fn vote_poll<'a>(conn: &Connection, req: Vec<&str>, senders: &mut Vec<Sender<Str
         [&body.id],
     ).expect("Should update answer in database");
 
-    for sender in senders.iter() {
-        sender.send("hoiya".to_string()).unwrap();
+    println!("{:#?}", &senders[&body.poll_id.to_string()]);
+
+    for sender in &senders[&body.poll_id.to_string()] {
+        let send_attempt = sender.send(body.id.to_string());
+
+        match send_attempt {
+            Ok(_) => println!("OK sender"),
+            _ => println!("Error sender"), 
+        }
     }
+
 
     ("HTTP/1.1 200 OK", String::from("true"))
 }
