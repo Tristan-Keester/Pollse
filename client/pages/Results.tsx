@@ -12,9 +12,12 @@ const Results = () => {
 
   const [question, setQuestion] = useState(""); 
   const [answers, setAnswers] = useState<React.ReactElement[]>([]);
+
+  const [socket, setSocket] = useState<WebSocket | null>();
   
   useEffect(() => {
     getPoll();
+    openSocket();
   }, []);
 
   async function getPoll() {
@@ -36,6 +39,7 @@ const Results = () => {
       for (let i = 0; i < data.answers.length; i++) {
         answerArray.push(<Answer 
           key={`${i}${data.answers[i].id}`} 
+          id={data.answers[i].id}
           num={i + 1} 
           value={data.answers[i].answer}
           answerOption={AnswerOptions.Results}
@@ -50,32 +54,27 @@ const Results = () => {
     }
   }
 
-  async function getAnswers() {
-    try {
-      const response = await fetch(`/api/poll/answers/${pollID}`);
-      const data = await response.json();
+  async function openSocket() {
+    const newSocket = new WebSocket(
+      `ws://localhost:3000/api/socketserver/${pollID}`,
+      "protocolOne",
+    );
 
-      console.log(data);
-
-      const answerArray: React.ReactElement[] = [];
-
-      for (let i = 0; i < data.answers.length; i++) {
-        answerArray.push(<Answer 
-          key={`${i}${data[i].id}`} 
-          num={i + 1} 
-          value={data[i].answer}
-          answerOption={AnswerOptions.Results}
-          votes={data[i].votes}
-        />);
+    newSocket.onopen = () => {
+      if (socket) {
+        socket.close();
       }
 
-      setAnswers(answerArray);
+      setSocket(newSocket);
     }
-    catch (error) {
-      console.error("Error getting updated answers: ", error);
-    }
-  }
 
+    newSocket.addEventListener("message", (event) => {
+      const toUpdate = document.getElementById(`answer${event.data}`);
+      const pEle = toUpdate.children[2] as HTMLParagraphElement;
+
+      pEle.innerText = (Number(pEle.innerText) + 1).toString();
+    });
+  }
 
   return(
     <div className="grid grid-cols-1 bg-gray-200 h-full w-full flex-col justify-items-center">

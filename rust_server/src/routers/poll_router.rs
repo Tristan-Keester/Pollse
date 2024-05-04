@@ -160,17 +160,21 @@ fn vote_poll<'a>(conn: &Connection, req: Vec<&str>, senders: &mut HashMap<String
         [&body.id],
     ).expect("Should update answer in database");
 
-    println!("{:#?}", &senders[&body.poll_id.to_string()]);
+    let senders_vec = &senders.get(&body.poll_id.to_string());
 
-    for sender in &senders[&body.poll_id.to_string()] {
-        let send_attempt = sender.send(body.id.to_string());
+    match senders_vec {
+        Some(_) => {
+            for sender in &senders[&body.poll_id.to_string()] {
+                let send_attempt = sender.send(body.id.to_string());
 
-        match send_attempt {
-            Ok(_) => println!("OK sender"),
-            _ => println!("Error sender"), 
-        }
+                match send_attempt {
+                    Ok(_) => (),
+                    _ => (), 
+                }
+            }
+        },
+        _ => (),
     }
-
 
     ("HTTP/1.1 200 OK", String::from("true"))
 }

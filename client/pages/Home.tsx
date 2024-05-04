@@ -26,6 +26,10 @@ const Home = () => {
     exampleSocket.onopen = () => {
       setSocket(exampleSocket);
     }
+
+    exampleSocket.addEventListener("message", (event) => {
+      console.log("Message from server: ", event.data);
+    })
   }
 
   async function sendOverSocket() {
