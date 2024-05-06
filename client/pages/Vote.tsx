@@ -58,8 +58,6 @@ const Vote = () => {
 
       const data = await response.json();
 
-      console.log(data);
-
       setQuestion(data.question);
 
       const answerArray: React.ReactElement[] = [];
