@@ -6,12 +6,23 @@ import Header from "../components/header";
 const Home = () => {
   const navigate = useNavigate();
 
-  function goToPoll() {
+  async function goToPoll() {
     const pollID = document.getElementById("go-to-poll-input") as HTMLInputElement;
 
     if (pollID.value === "") return;
 
-    navigate(`/vote/${pollID.value}`);
+    try {
+      const response = await fetch(`api/poll/data/${pollID.value}`);
+      if (response.status !== 200) {
+        // !!! Create visual telling user poll doesn't exist
+        console.log("Poll does not exist");
+        return;
+      }
+      navigate(`/vote/${pollID.value}`);
+    }
+    catch (error) {
+      console.error("Error occured when fetching pollID: ", error);
+    }
   }
 
   return(
