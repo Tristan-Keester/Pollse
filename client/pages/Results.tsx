@@ -63,8 +63,6 @@ const Results = () => {
 
   async function getPoll() {
     try {
-      // !!! Move this check to home and transfer the data over to here instead
-      // cause right now the screen flickers and it suck
       const response = await fetch(`/api/poll/data/${pollID}`);
 
       if (response.status === 404) {

@@ -34,9 +34,7 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Rece
                 Ok(_) => (),
                 _ => {
                     if has_pinged {
-                        // !!! Gracefully end connection
                         if initiated_close {
-                            println!("Breaking out");
                             break;
                         }
                         else {
@@ -56,14 +54,10 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Rece
 
             match initial_size_buf[0] {
                 129 => {
-                    let decoded = decode_frame(&stream, initial_size_buf);
-                    println!("{:#?}", decoded);
-
-                    let reply = create_frame("does this work", 129);
-                    stream.write_all(&reply).unwrap();
+                    // Shouldn't be receiving anything data from client side, so we just throw it out
+                    let _ = stream.read(&mut [0; 128]);
                 },
                 136 => {
-                    println!("Received close frame");
                     if !initiated_close {
                         send_close_frame(&stream);
                     }
@@ -78,7 +72,7 @@ pub fn continue_connection(mut stream: TcpStream, req: Vec<&str>, receiver: Rece
                     decode_frame(&stream, initial_size_buf);
                 },
                 err => {
-                    println!("something unknown came through: {:#?}", err);
+                    println!("Received unknown opcode: {:?}", err);
                     initiated_close = true;
                     let close = create_frame("", 136);
                     stream.write_all(&close).unwrap();

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import Header from "../components/header";
 import Answer, { AnswerOptions } from "../components/answer";
+import ErrorBlock from "../components/error";
 
 const Vote = () => {
   const location = useLocation();
@@ -12,6 +13,7 @@ const Vote = () => {
 
   const [question, setQuestion] = useState(""); 
   const [answers, setAnswers] = useState<React.ReactElement[]>([]);
+  const [errorDiv, setErrorDiv] = useState<React.ReactElement>(null);
   
   useEffect(() => {
     getPoll();
@@ -37,8 +39,7 @@ const Vote = () => {
         navigate(`/results/${pollID}`);
       }
       else {
-        // !!! Inform user of voting issue
-        console.error("Couldn't vote");
+        setErrorDiv(<ErrorBlock errorText="An Error occured when trying to send vote" />);
       }
     }
     catch (error) {
@@ -48,8 +49,6 @@ const Vote = () => {
 
   async function getPoll() {
     try {
-      // !!! Move this check to home and transfer the data over to here instead
-      // cause right now the screen flickers and it suck
       const response = await fetch(`/api/poll/data/${pollID}`);
 
       if (response.status === 404) {
@@ -97,6 +96,7 @@ const Vote = () => {
         </div>
         <div className="col-span-6 h-1 w-full bg-orange-300"></div>
         <button type="button" onClick={goToResults} className="col-span-6 w-32 h-12 bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Go To Results</button>
+        {errorDiv}
       </div>
     </div>
   );

@@ -106,8 +106,8 @@ struct Question {
 }
 
 fn get_question(conn: &Connection, poll_id: i64) -> String {
-    let mut stmt = conn.prepare(format!("SELECT question FROM polls WHERE id = {}", &poll_id).as_str()).expect("Should find answers");
-    let question = stmt.query_map([], |row| {
+    let mut stmt = conn.prepare("SELECT question FROM polls WHERE id = (?)").expect("Should find answers");
+    let question = stmt.query_map([&poll_id], |row| {
         Ok(Question {
             quest: row.get(0)?,
         })
@@ -131,9 +131,8 @@ struct Answer {
 }
 
 fn get_answers(conn: &Connection, poll_id: i64) -> Vec<Answer> {
-    // !!! Figure out how to properly sanitize input
-    let mut stmt = conn.prepare(format!("SELECT id, answer, votes FROM answers WHERE poll_id = {}", &poll_id).as_str()).expect("Should find answers");
-    let answer_iter = stmt.query_map([], |row| {
+    let mut stmt = conn.prepare("SELECT id, answer, votes FROM answers WHERE poll_id = (?)").expect("Should find answers");
+    let answer_iter = stmt.query_map([&poll_id], |row| {
         Ok(Answer {
             id: row.get(0)?,
             answer: row.get(1)?,

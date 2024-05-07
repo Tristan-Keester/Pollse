@@ -4,20 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import Header from "../components/header";
 import Answer, { AnswerOptions } from "../components/answer";
 import { PollCreateData } from "../types";
+import ErrorBlock from "../components/error";
 
 const MakePoll = () => {
   const navigate = useNavigate();
 
   const [answers, setAnswers] = useState<String[]>([]);
   const [htmlAnswers, setHtmlAnswers] = useState<React.JSX.Element[]>([]);
+  const [errorDiv, setErrorDiv] = useState<React.ReactElement>(null);
 
   function addAnswer() {
     const ans = document.getElementById("answer-input-field") as HTMLInputElement;
     
-    // !!! Tell user to put something in field
-    if (ans.value === "") return; 
-    // !!! Tell user they created duplicate
-    if (answers.includes(ans.value)) return;
+    if (ans.value === "") {
+      setErrorDiv(<div className="col-span-6"><ErrorBlock errorText="No answer in field" /></div>);
+      return;
+    }; 
+    if (answers.includes(ans.value)) {
+      setErrorDiv(<div className="col-span-6"><ErrorBlock errorText="Answers must be unique" /></div>);
+      return;
+    };
 
     const htmlAns = <Answer 
       key={`${ans.value}${answers.length + 1}${Date.now()}`} 
@@ -35,9 +41,14 @@ const MakePoll = () => {
   async function startPoll() {
     const question = document.getElementById("question-input-field") as HTMLInputElement;
 
-    // !!! Tell user to input a question
-    if (question.value === "") return;
-    if (answers.length <= 1) return;
+    if (question.value === "") {
+      setErrorDiv(<div className="col-span-6"><ErrorBlock errorText="Must have a question" /></div>);
+      return;
+    };
+    if (answers.length <= 1) {
+      setErrorDiv(<div className="col-span-6"><ErrorBlock errorText="Must have 2 or more answers to start poll" /></div>);
+      return;
+    };
 
     const pollCreateData: PollCreateData = { question: question.value, answers };
     
@@ -75,6 +86,7 @@ const MakePoll = () => {
         </div>
         <div className="col-span-6 h-1 w-full bg-orange-300"></div>
         <button type="button" id="start-poll-button" onClick={startPoll} className="col-span-6 w-32 h-12 bg-white font-bold border-black border-solid border-2 rounded m-2 p-1">Start Poll</button>
+        {errorDiv}
       </div>
     </div>
   );
